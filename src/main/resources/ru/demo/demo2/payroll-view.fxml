@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox spacing="10.0" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="ru.demo.demo2.controller.PayrollController">
+    <padding>
+        <Insets bottom="15.0" left="15.0" right="15.0" top="15.0"/>
+    </padding>
+    
+    <Label style="-fx-font-size: 18px; -fx-font-weight: bold;" text="Формирование ведомостей"/>
+    
+    <HBox alignment="CENTER_LEFT" spacing="10.0">
+        <VBox.margin>
+            <Insets top="10.0"/>
+        </VBox.margin>
+        
+        <Label text="Выберите месяц:"/>
+        <DatePicker fx:id="monthPicker" prefWidth="150.0"/>
+        <Button onAction="#onCreatePayrollClick" style="-fx-background-color: #2196F3; -fx-text-fill: white;" text="Создать ведомость"/>
+        <Button onAction="#onGenerateFileClick" style="-fx-background-color: #4CAF50; -fx-text-fill: white;" text="Сформировать PDF"/>
+        <Button onAction="#onDeletePayrollClick" style="-fx-background-color: #f44336; -fx-text-fill: white;" text="Удалить"/>
+    </HBox>
+    
+    <Label fx:id="resultLabel" style="-fx-font-size: 12px;">
+        <VBox.margin>
+            <Insets top="5.0"/>
+        </VBox.margin>
+    </Label>
+    
+    <Label style="-fx-font-weight: bold;" text="Список ведомостей:">
+        <VBox.margin>
+            <Insets top="10.0"/>
+        </VBox.margin>
+    </Label>
+    
+    <TableView fx:id="payrollsTable" prefHeight="200.0">
+        <columns>
+            <TableColumn fx:id="idColumn" prefWidth="50.0" text="ID"/>
+            <TableColumn fx:id="monthColumn" prefWidth="100.0" text="Месяц"/>
+            <TableColumn fx:id="createdColumn" prefWidth="120.0" text="Дата создания"/>
+            <TableColumn fx:id="statusColumn" prefWidth="120.0" text="Статус"/>
+            <TableColumn fx:id="fileColumn" prefWidth="400.0" text="Файл"/>
+        </columns>
+    </TableView>
+    
+    <Label style="-fx-font-weight: bold;" text="Начисления в выбранной ведомости:">
+        <VBox.margin>
+            <Insets top="10.0"/>
+        </VBox.margin>
+    </Label>
+    
+    <TableView fx:id="accrualsTable" VBox.vgrow="ALWAYS">
+        <columns>
+            <TableColumn fx:id="studentColumn" prefWidth="300.0" text="ФИО студента"/>
+            <TableColumn fx:id="typeColumn" prefWidth="250.0" text="Тип стипендии"/>
+            <TableColumn fx:id="amountColumn" prefWidth="150.0" text="Сумма"/>
+        </columns>
+    </TableView>
+</VBox>
