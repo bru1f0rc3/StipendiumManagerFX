@@ -45,68 +45,42 @@ public class StudentsController {
         groupDao = new StudentGroupDao();
         studentsList = FXCollections.observableArrayList();
         
-        idColumn.setCellValueFactory(cellData -> 
-            new SimpleStringProperty(cellData.getValue().getId().toString()));
-        
-        fioColumn.setCellValueFactory(cellData -> 
-            new SimpleStringProperty(cellData.getValue().getFio()));
-        
-        groupColumn.setCellValueFactory(cellData -> 
-            new SimpleStringProperty(cellData.getValue().getGroupCode()));
-        
-        avgGradeColumn.setCellValueFactory(cellData -> 
-            new SimpleStringProperty(cellData.getValue().getAvgGrade().toString()));
-        
-        socialStatusColumn.setCellValueFactory(cellData -> 
-            new SimpleStringProperty(cellData.getValue().getHasSocialStatus() ? "Да" : "Нет"));
+        idColumn.setCellValueFactory(cd -> new SimpleStringProperty(cd.getValue().getId().toString()));
+        fioColumn.setCellValueFactory(cd -> new SimpleStringProperty(cd.getValue().getFio()));
+        groupColumn.setCellValueFactory(cd -> new SimpleStringProperty(cd.getValue().getGroupCode()));
+        avgGradeColumn.setCellValueFactory(cd -> new SimpleStringProperty(cd.getValue().getAvgGrade().toString()));
+        socialStatusColumn.setCellValueFactory(cd -> new SimpleStringProperty(cd.getValue().getHasSocialStatus() ? "Да" : "Нет"));
         
         studentsTable.setItems(studentsList);
         loadStudents();
     }
     
     @FXML
-    private void onAddClick() {
-        showEditDialog(null);
-    }
+    private void onAddClick() { showEditDialog(null); }
     
     @FXML
     private void onEditClick() {
-        Student selected = studentsTable.getSelectionModel().getSelectedItem();
-        if (selected == null) {
-            showAlert("Выберите студента для редактирования");
-            return;
-        }
-        showEditDialog(selected);
+        Student s = studentsTable.getSelectionModel().getSelectedItem();
+        if (s == null) { showAlert("Выберите студента для редактирования"); return; }
+        showEditDialog(s);
     }
     
     @FXML
     private void onDeleteClick() {
-        Student selected = studentsTable.getSelectionModel().getSelectedItem();
-        if (selected == null) {
-            showAlert("Выберите студента для удаления");
-            return;
-        }
-        
+        Student s = studentsTable.getSelectionModel().getSelectedItem();
+        if (s == null) { showAlert("Выберите студента для удаления"); return; }
         Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
         confirm.setTitle("Подтверждение");
-        confirm.setHeaderText("Удалить студента?");
-        confirm.setContentText("Вы уверены, что хотите удалить студента " + selected.getFio() + "?");
-        
-        if (confirm.showAndWait().get() == ButtonType.OK) {
-            studentDao.delete(selected);
-            loadStudents();
-        }
+        confirm.setContentText("Удалить " + s.getFio() + "?");
+        if (confirm.showAndWait().get() == ButtonType.OK) { studentDao.delete(s); loadStudents(); }
     }
     
     @FXML
-    private void onRefreshClick() {
-        loadStudents();
-    }
+    private void onRefreshClick() { loadStudents(); }
     
     private void loadStudents() {
         studentsList.clear();
-        List<Student> students = studentDao.findAll();
-        studentsList.addAll(students);
+        studentsList.addAll(studentDao.findAll());
     }
     
     private void showEditDialog(Student student) {
@@ -175,11 +149,9 @@ public class StudentsController {
         });
     }
     
-    private void showAlert(String message) {
-        Alert alert = new Alert(Alert.AlertType.WARNING);
-        alert.setTitle("Внимание");
-        alert.setHeaderText(null);
-        alert.setContentText(message);
-        alert.showAndWait();
+    private void showAlert(String msg) {
+        Alert a = new Alert(Alert.AlertType.WARNING);
+        a.setContentText(msg);
+        a.showAndWait();
     }
 }

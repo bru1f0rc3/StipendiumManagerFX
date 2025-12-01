@@ -37,65 +37,40 @@ public class GroupsController {
         groupDao = new StudentGroupDao();
         groupsList = FXCollections.observableArrayList();
         
-        idColumn.setCellValueFactory(cellData -> 
-            new SimpleStringProperty(cellData.getValue().getId().toString()));
-        
-        groupCodeColumn.setCellValueFactory(cellData -> 
-            new SimpleStringProperty(cellData.getValue().getGroupCode()));
-        
-        courseColumn.setCellValueFactory(cellData -> 
-            new SimpleStringProperty(cellData.getValue().getCourse().toString()));
-        
-        facultyColumn.setCellValueFactory(cellData -> 
-            new SimpleStringProperty(cellData.getValue().getFaculty()));
+        idColumn.setCellValueFactory(cd -> new SimpleStringProperty(cd.getValue().getId().toString()));
+        groupCodeColumn.setCellValueFactory(cd -> new SimpleStringProperty(cd.getValue().getGroupCode()));
+        courseColumn.setCellValueFactory(cd -> new SimpleStringProperty(cd.getValue().getCourse().toString()));
+        facultyColumn.setCellValueFactory(cd -> new SimpleStringProperty(cd.getValue().getFaculty()));
         
         groupsTable.setItems(groupsList);
         loadGroups();
     }
     
     @FXML
-    private void onAddClick() {
-        showEditDialog(null);
-    }
+    private void onAddClick() { showEditDialog(null); }
     
     @FXML
     private void onEditClick() {
-        StudentGroup selected = groupsTable.getSelectionModel().getSelectedItem();
-        if (selected == null) {
-            showAlert("Выберите группу для редактирования");
-            return;
-        }
-        showEditDialog(selected);
+        StudentGroup g = groupsTable.getSelectionModel().getSelectedItem();
+        if (g == null) { showAlert("Выберите группу для редактирования"); return; }
+        showEditDialog(g);
     }
     
     @FXML
     private void onDeleteClick() {
-        StudentGroup selected = groupsTable.getSelectionModel().getSelectedItem();
-        if (selected == null) {
-            showAlert("Выберите группу для удаления");
-            return;
-        }
-        
+        StudentGroup g = groupsTable.getSelectionModel().getSelectedItem();
+        if (g == null) { showAlert("Выберите группу для удаления"); return; }
         Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
-        confirm.setTitle("Подтверждение");
-        confirm.setHeaderText("Удалить группу?");
-        confirm.setContentText("Вы уверены, что хотите удалить группу " + selected.getGroupCode() + "?");
-        
-        if (confirm.showAndWait().get() == ButtonType.OK) {
-            groupDao.delete(selected);
-            loadGroups();
-        }
+        confirm.setContentText("Удалить " + g.getGroupCode() + "?");
+        if (confirm.showAndWait().get() == ButtonType.OK) { groupDao.delete(g); loadGroups(); }
     }
     
     @FXML
-    private void onRefreshClick() {
-        loadGroups();
-    }
+    private void onRefreshClick() { loadGroups(); }
     
     private void loadGroups() {
         groupsList.clear();
-        List<StudentGroup> groups = groupDao.findAll();
-        groupsList.addAll(groups);
+        groupsList.addAll(groupDao.findAll());
     }
     
     private void showEditDialog(StudentGroup group) {
@@ -158,11 +133,9 @@ public class GroupsController {
         });
     }
     
-    private void showAlert(String message) {
-        Alert alert = new Alert(Alert.AlertType.WARNING);
-        alert.setTitle("Внимание");
-        alert.setHeaderText(null);
-        alert.setContentText(message);
-        alert.showAndWait();
+    private void showAlert(String msg) {
+        Alert a = new Alert(Alert.AlertType.WARNING);
+        a.setContentText(msg);
+        a.showAndWait();
     }
 }

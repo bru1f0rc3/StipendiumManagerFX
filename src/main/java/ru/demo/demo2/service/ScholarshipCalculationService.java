@@ -25,74 +25,38 @@ public class ScholarshipCalculationService {
     
     public List<Accrual> calculateScholarships(LocalDate month) {
         List<Accrual> result = new ArrayList<>();
-        List<Student> students = studentDao.findAll();
-        List<ScholarshipType> types = typeDao.findAll();
-        Status calculatedStatus = statusDao.findByCode("calculated");
+        Status status = statusDao.findByCode("calculated");
+        if (status == null) throw new RuntimeException("Статус 'calculated' не найден");
         
-        if (calculatedStatus == null) {
-            throw new RuntimeException("Статус 'calculated' не найден в базе данных");
-        }
-        
-        for (Student student : students) {
-            for (ScholarshipType type : types) {
-                if (checkConditions(student, type, month)) {
-                    Accrual accrual = new Accrual();
-                    accrual.setStudent(student);
-                    accrual.setType(type);
-                    accrual.setAmount(type.getBaseAmount());
-                    accrual.setForMonth(month);
-                    accrual.setStatus(calculatedStatus);
-                    
-                    try {
-                        accrualDao.save(accrual);
-                        result.add(accrual);
-                    } catch (Exception e) {
-                    }
+        for (Student s : studentDao.findAll()) {
+            for (ScholarshipType t : typeDao.findAll()) {
+                if (checkConditions(s, t, month)) {
+                    Accrual a = new Accrual();
+                    a.setStudent(s);
+                    a.setType(t);
+                    a.setAmount(t.getBaseAmount());
+                    a.setForMonth(month);
+                    a.setStatus(status);
+                    try { accrualDao.save(a); result.add(a); } catch (Exception e) {}
                 }
             }
         }
-        
         return result;
     }
 
-    private boolean checkConditions(Student student, ScholarshipType type, LocalDate month) {
-        String name = type.getName().toLowerCase();
-
-        if (name.contains("академическая")) {
-            if (student.getAvgGrade().compareTo(new BigDecimal("4.00")) < 0) {
-                return false;
-            }
-        }
-
-        if (name.contains("губернаторская")) {
-            if (student.getAvgGrade().compareTo(new BigDecimal("4.50")) < 0) {
-                return false;
-            }
-        }
-
-        if (name.contains("социальная")) {
-            if (student.getHasSocialStatus() != true) {
-                return false;
-            }
-        }
-
-        if (type.getRequiresDocs() != null && type.getRequiresDocs()) {
-            return groundDao.hasValidGround(student, type, month);
-        }
-        
+    private boolean checkConditions(Student s, ScholarshipType t, LocalDate m) {
+        String name = t.getName().toLowerCase();
+        if (name.contains("академическая") && s.getAvgGrade().compareTo(new BigDecimal("4.00")) < 0) return false;
+        if (name.contains("губернаторская") && s.getAvgGrade().compareTo(new BigDecimal("4.50")) < 0) return false;
+        if (name.contains("социальная") && !s.getHasSocialStatus()) return false;
+        if (t.getRequiresDocs() != null && t.getRequiresDocs()) return groundDao.hasValidGround(s, t, m);
         return true;
     }
 
     public List<Accrual> getAccrualsForMonth(LocalDate month) {
-        List<Accrual> all = accrualDao.findAll();
         List<Accrual> result = new ArrayList<>();
-        
-        for (Accrual a : all) {
-            if (a.getForMonth().equals(month)) {
-                result.add(a);
-            }
-        }
-        
+        for (Accrual a : accrualDao.findAll())
+            if (a.getForMonth().equals(month)) result.add(a);
         return result;
     }
 }

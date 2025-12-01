@@ -52,72 +52,43 @@ public class GroundsController {
         typeDao = new ScholarshipTypeDao();
         groundsList = FXCollections.observableArrayList();
         
-        idColumn.setCellValueFactory(cellData -> 
-            new SimpleStringProperty(cellData.getValue().getId().toString()));
-        
-        studentColumn.setCellValueFactory(cellData -> 
-            new SimpleStringProperty(cellData.getValue().getStudent().getFio()));
-        
-        typeColumn.setCellValueFactory(cellData -> 
-            new SimpleStringProperty(cellData.getValue().getType().getName()));
-        
-        docTypeColumn.setCellValueFactory(cellData -> 
-            new SimpleStringProperty(cellData.getValue().getDocType()));
-        
-        issueDateColumn.setCellValueFactory(cellData -> 
-            new SimpleStringProperty(cellData.getValue().getIssueDate().toString()));
-        
-        validUntilColumn.setCellValueFactory(cellData -> 
-            new SimpleStringProperty(cellData.getValue().getValidUntil() != null 
-                ? cellData.getValue().getValidUntil().toString() : ""));
+        idColumn.setCellValueFactory(cd -> new SimpleStringProperty(cd.getValue().getId().toString()));
+        studentColumn.setCellValueFactory(cd -> new SimpleStringProperty(cd.getValue().getStudent().getFio()));
+        typeColumn.setCellValueFactory(cd -> new SimpleStringProperty(cd.getValue().getType().getName()));
+        docTypeColumn.setCellValueFactory(cd -> new SimpleStringProperty(cd.getValue().getDocType()));
+        issueDateColumn.setCellValueFactory(cd -> new SimpleStringProperty(cd.getValue().getIssueDate().toString()));
+        validUntilColumn.setCellValueFactory(cd -> new SimpleStringProperty(cd.getValue().getValidUntil() != null ? cd.getValue().getValidUntil().toString() : ""));
         
         groundsTable.setItems(groundsList);
         loadGrounds();
     }
     
     @FXML
-    private void onAddClick() {
-        showEditDialog(null);
-    }
+    private void onAddClick() { showEditDialog(null); }
     
     @FXML
     private void onEditClick() {
-        Ground selected = groundsTable.getSelectionModel().getSelectedItem();
-        if (selected == null) {
-            showAlert("Выберите основание для редактирования");
-            return;
-        }
-        showEditDialog(selected);
+        Ground g = groundsTable.getSelectionModel().getSelectedItem();
+        if (g == null) { showAlert("Выберите основание для редактирования"); return; }
+        showEditDialog(g);
     }
     
     @FXML
     private void onDeleteClick() {
-        Ground selected = groundsTable.getSelectionModel().getSelectedItem();
-        if (selected == null) {
-            showAlert("Выберите основание для удаления");
-            return;
-        }
+        Ground g = groundsTable.getSelectionModel().getSelectedItem();
+        if (g == null) { showAlert("Выберите основание для удаления"); return; }
         
         Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
-        confirm.setTitle("Подтверждение");
-        confirm.setHeaderText("Удалить основание?");
-        confirm.setContentText("Вы уверены, что хотите удалить это основание?");
-        
-        if (confirm.showAndWait().get() == ButtonType.OK) {
-            groundDao.delete(selected);
-            loadGrounds();
-        }
+        confirm.setContentText("Удалить основание?");
+        if (confirm.showAndWait().get() == ButtonType.OK) { groundDao.delete(g); loadGrounds(); }
     }
     
     @FXML
-    private void onRefreshClick() {
-        loadGrounds();
-    }
+    private void onRefreshClick() { loadGrounds(); }
     
     private void loadGrounds() {
         groundsList.clear();
-        List<Ground> grounds = groundDao.findAll();
-        groundsList.addAll(grounds);
+        groundsList.addAll(groundDao.findAll());
     }
     
     private void showEditDialog(Ground ground) {
@@ -213,11 +184,9 @@ public class GroundsController {
         });
     }
     
-    private void showAlert(String message) {
-        Alert alert = new Alert(Alert.AlertType.WARNING);
-        alert.setTitle("Внимание");
-        alert.setHeaderText(null);
-        alert.setContentText(message);
-        alert.showAndWait();
+    private void showAlert(String msg) {
+        Alert a = new Alert(Alert.AlertType.WARNING);
+        a.setContentText(msg);
+        a.showAndWait();
     }
 }

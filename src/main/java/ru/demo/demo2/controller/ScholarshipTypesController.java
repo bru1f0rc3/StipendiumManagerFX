@@ -38,65 +38,41 @@ public class ScholarshipTypesController {
         typeDao = new ScholarshipTypeDao();
         typesList = FXCollections.observableArrayList();
         
-        idColumn.setCellValueFactory(cellData -> 
-            new SimpleStringProperty(cellData.getValue().getId().toString()));
-        
-        nameColumn.setCellValueFactory(cellData -> 
-            new SimpleStringProperty(cellData.getValue().getName()));
-        
-        baseAmountColumn.setCellValueFactory(cellData -> 
-            new SimpleStringProperty(String.format("%.2f", cellData.getValue().getBaseAmount())));
-        
-        requiresDocsColumn.setCellValueFactory(cellData -> 
-            new SimpleStringProperty(cellData.getValue().getRequiresDocs() ? "Да" : "Нет"));
+        idColumn.setCellValueFactory(cd -> new SimpleStringProperty(cd.getValue().getId().toString()));
+        nameColumn.setCellValueFactory(cd -> new SimpleStringProperty(cd.getValue().getName()));
+        baseAmountColumn.setCellValueFactory(cd -> new SimpleStringProperty(String.format("%.2f", cd.getValue().getBaseAmount())));
+        requiresDocsColumn.setCellValueFactory(cd -> new SimpleStringProperty(cd.getValue().getRequiresDocs() ? "Да" : "Нет"));
         
         typesTable.setItems(typesList);
         loadTypes();
     }
     
     @FXML
-    private void onAddClick() {
-        showEditDialog(null);
-    }
+    private void onAddClick() { showEditDialog(null); }
     
     @FXML
     private void onEditClick() {
-        ScholarshipType selected = typesTable.getSelectionModel().getSelectedItem();
-        if (selected == null) {
-            showAlert("Выберите тип стипендии для редактирования");
-            return;
-        }
-        showEditDialog(selected);
+        ScholarshipType t = typesTable.getSelectionModel().getSelectedItem();
+        if (t == null) { showAlert("Выберите тип стипендии для редактирования"); return; }
+        showEditDialog(t);
     }
     
     @FXML
     private void onDeleteClick() {
-        ScholarshipType selected = typesTable.getSelectionModel().getSelectedItem();
-        if (selected == null) {
-            showAlert("Выберите тип стипендии для удаления");
-            return;
-        }
+        ScholarshipType t = typesTable.getSelectionModel().getSelectedItem();
+        if (t == null) { showAlert("Выберите тип стипендии для удаления"); return; }
         
         Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
-        confirm.setTitle("Подтверждение");
-        confirm.setHeaderText("Удалить тип стипендии?");
-        confirm.setContentText("Вы уверены, что хотите удалить " + selected.getName() + "?");
-        
-        if (confirm.showAndWait().get() == ButtonType.OK) {
-            typeDao.delete(selected);
-            loadTypes();
-        }
+        confirm.setContentText("Удалить " + t.getName() + "?");
+        if (confirm.showAndWait().get() == ButtonType.OK) { typeDao.delete(t); loadTypes(); }
     }
     
     @FXML
-    private void onRefreshClick() {
-        loadTypes();
-    }
+    private void onRefreshClick() { loadTypes(); }
     
     private void loadTypes() {
         typesList.clear();
-        List<ScholarshipType> types = typeDao.findAll();
-        typesList.addAll(types);
+        typesList.addAll(typeDao.findAll());
     }
     
     private void showEditDialog(ScholarshipType type) {
@@ -158,11 +134,9 @@ public class ScholarshipTypesController {
         });
     }
     
-    private void showAlert(String message) {
-        Alert alert = new Alert(Alert.AlertType.WARNING);
-        alert.setTitle("Внимание");
-        alert.setHeaderText(null);
-        alert.setContentText(message);
-        alert.showAndWait();
+    private void showAlert(String msg) {
+        Alert a = new Alert(Alert.AlertType.WARNING);
+        a.setContentText(msg);
+        a.showAndWait();
     }
 }

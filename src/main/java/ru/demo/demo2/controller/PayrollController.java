@@ -63,47 +63,18 @@ public class PayrollController {
         payrollsList = FXCollections.observableArrayList();
         accrualsList = FXCollections.observableArrayList();
 
-        idColumn.setCellValueFactory(cellData -> 
-            new javafx.beans.property.SimpleStringProperty(cellData.getValue().getId().toString()));
-        
-        monthColumn.setCellValueFactory(cellData -> 
-            new javafx.beans.property.SimpleStringProperty(cellData.getValue().getForMonth().format(DateTimeFormatter.ofPattern("MM.yyyy"))));
-        
-        createdColumn.setCellValueFactory(cellData -> {
-            if (cellData.getValue().getCreatedAt() != null)
-                return new javafx.beans.property.SimpleStringProperty(cellData.getValue().getCreatedAt().format(DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm")));
-            else
-                return new javafx.beans.property.SimpleStringProperty("");
-        });
-        
-        statusColumn.setCellValueFactory(cellData -> 
-            new javafx.beans.property.SimpleStringProperty(cellData.getValue().getStatus() != null ? cellData.getValue().getStatus().toString() : ""));
-        
-        fileColumn.setCellValueFactory(cellData -> {
-            if (cellData.getValue().getFilePath() != null)
-                return new javafx.beans.property.SimpleStringProperty(cellData.getValue().getFilePath());
-            else
-                return new javafx.beans.property.SimpleStringProperty("");
-        });
+        idColumn.setCellValueFactory(cd -> new javafx.beans.property.SimpleStringProperty(cd.getValue().getId().toString()));
+        monthColumn.setCellValueFactory(cd -> new javafx.beans.property.SimpleStringProperty(cd.getValue().getForMonth().format(DateTimeFormatter.ofPattern("MM.yyyy"))));
+        createdColumn.setCellValueFactory(cd -> new javafx.beans.property.SimpleStringProperty(cd.getValue().getCreatedAt() != null ? cd.getValue().getCreatedAt().format(DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm")) : ""));
+        statusColumn.setCellValueFactory(cd -> new javafx.beans.property.SimpleStringProperty(cd.getValue().getStatus() != null ? cd.getValue().getStatus().toString() : ""));
+        fileColumn.setCellValueFactory(cd -> new javafx.beans.property.SimpleStringProperty(cd.getValue().getFilePath() != null ? cd.getValue().getFilePath() : ""));
         
         payrollsTable.setItems(payrollsList);
-
-        studentColumn.setCellValueFactory(cellData -> 
-            new javafx.beans.property.SimpleStringProperty(cellData.getValue().getStudent().getFio()));
-        
-        typeColumn.setCellValueFactory(cellData -> 
-            new javafx.beans.property.SimpleStringProperty(cellData.getValue().getType().getName()));
-        
-        amountColumn.setCellValueFactory(cellData -> 
-            new javafx.beans.property.SimpleStringProperty(String.format("%.2f", cellData.getValue().getAmount())));
-        
+        studentColumn.setCellValueFactory(cd -> new javafx.beans.property.SimpleStringProperty(cd.getValue().getStudent().getFio()));
+        typeColumn.setCellValueFactory(cd -> new javafx.beans.property.SimpleStringProperty(cd.getValue().getType().getName()));
+        amountColumn.setCellValueFactory(cd -> new javafx.beans.property.SimpleStringProperty(String.format("%.2f", cd.getValue().getAmount())));
         accrualsTable.setItems(accrualsList);
-
-        payrollsTable.getSelectionModel().selectedItemProperty().addListener((obs, oldVal, newVal) -> {
-            if (newVal != null) {
-                loadAccrualsForPayroll(newVal.getId());
-            }
-        });
+        payrollsTable.getSelectionModel().selectedItemProperty().addListener((obs, old, n) -> { if (n != null) loadAccrualsForPayroll(n.getId()); });
 
         monthPicker.setValue(LocalDate.now());
 
@@ -113,45 +84,30 @@ public class PayrollController {
     @FXML
     private void onCreatePayrollClick() {
         LocalDate month = monthPicker.getValue();
-        if (month == null) {
-            resultLabel.setText("Выберите месяц");
-            return;
-        }
- 
-        Payroll payroll = payrollService.createPayroll(month);
+        if (month == null) { resultLabel.setText("Выберите месяц"); return; }
+        Payroll p = payrollService.createPayroll(month);
         loadPayrolls();
-        
-        resultLabel.setText("Ведомость создана! ID: " + payroll.getId());
+        resultLabel.setText("Ведомость создана! ID: " + p.getId());
         resultLabel.setStyle("-fx-text-fill: green;");
     }
 
     @FXML
     private void onGenerateFileClick() {
-        Payroll payroll = payrollsTable.getSelectionModel().getSelectedItem();
-        if (payroll == null) {
-            resultLabel.setText("Выберите ведомость в таблице");
-            return;
-        }
-
-        String file = payrollService.generatePayrollFile(payroll);
+        Payroll p = payrollsTable.getSelectionModel().getSelectedItem();
+        if (p == null) { resultLabel.setText("Выберите ведомость в таблице"); return; }
+        String file = payrollService.generatePayrollFile(p);
         loadPayrolls();
-        
         resultLabel.setText("PDF создан: " + file);
         resultLabel.setStyle("-fx-text-fill: green;");
     }
 
     @FXML
     private void onDeletePayrollClick() {
-        Payroll payroll = payrollsTable.getSelectionModel().getSelectedItem();
-        if (payroll == null) {
-            resultLabel.setText("Выберите ведомость в таблице");
-            return;
-        }
-
-        payrollService.deletePayroll(payroll.getId());
+        Payroll p = payrollsTable.getSelectionModel().getSelectedItem();
+        if (p == null) { resultLabel.setText("Выберите ведомость в таблице"); return; }
+        payrollService.deletePayroll(p.getId());
         loadPayrolls();
         accrualsList.clear();
-        
         resultLabel.setText("Ведомость удалена");
         resultLabel.setStyle("-fx-text-fill: blue;");
     }
@@ -174,42 +130,25 @@ public class PayrollController {
     private void loadAccrualsForPayroll(Integer payrollId) {
         try {
             accrualsList.clear();
-            List<Accrual> accruals = payrollService.getAccrualsForPayroll(payrollId);
-
             Map<Integer, List<Accrual>> studentMap = new LinkedHashMap<>();
-            for (Accrual accrual : accruals) {
-                studentMap.computeIfAbsent(accrual.getStudent().getId(), k -> new ArrayList<>()).add(accrual);
-            }
+            for (Accrual a : payrollService.getAccrualsForPayroll(payrollId))
+                studentMap.computeIfAbsent(a.getStudent().getId(), k -> new ArrayList<>()).add(a);
 
             for (List<Accrual> group : studentMap.values()) {
                 if (group.isEmpty()) continue;
-
-                Accrual first = group.get(0);
-
-                if (group.size() == 1) {
-                    accrualsList.add(first);
-                } else {
-                    Accrual merged = new Accrual();
-                    merged.setId(first.getId());
-                    merged.setStudent(first.getStudent());
-                    merged.setForMonth(first.getForMonth());
-                    merged.setStatus(first.getStatus());
-
-                    String types = group.stream()
-                        .map(a -> a.getType().getName())
-                        .collect(Collectors.joining(", "));
-
-                    BigDecimal total = group.stream()
-                        .map(Accrual::getAmount)
-                        .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-                    ScholarshipType tempType = new ScholarshipType();
-                    tempType.setName(types);
-                    merged.setType(tempType);
-                    merged.setAmount(total);
-                    
-                    accrualsList.add(merged);
-                }
+                if (group.size() == 1) { accrualsList.add(group.get(0)); continue; }
+                
+                Accrual first = group.get(0), merged = new Accrual();
+                merged.setId(first.getId());
+                merged.setStudent(first.getStudent());
+                merged.setForMonth(first.getForMonth());
+                merged.setStatus(first.getStatus());
+                merged.setAmount(group.stream().map(Accrual::getAmount).reduce(BigDecimal.ZERO, BigDecimal::add));
+                
+                ScholarshipType type = new ScholarshipType();
+                type.setName(group.stream().map(a -> a.getType().getName()).collect(Collectors.joining(", ")));
+                merged.setType(type);
+                accrualsList.add(merged);
             }
         } catch (Exception e) {
             resultLabel.setText("Ошибка при загрузке начислений: " + e.getMessage());

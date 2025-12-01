@@ -38,46 +38,31 @@ public class PayrollGenerationService {
     }
 
     public Payroll createPayroll(LocalDate forMonth) {
-        Payroll existingPayroll = payrollDao.findByMonth(forMonth);
-        if (existingPayroll != null) {
-            throw new RuntimeException("Ведомость за " + forMonth + " уже существует (ID: " + existingPayroll.getId() + ")");
-        }
+        Payroll existing = payrollDao.findByMonth(forMonth);
+        if (existing != null) throw new RuntimeException("Ведомость за " + forMonth + " уже существует");
 
         Session session = HibernateSession.getSessionFactory().openSession();
-        Transaction transaction = null;
-
+        Transaction tx = null;
         try {
-            transaction = session.beginTransaction();
-
-            Status draftStatus = statusDao.findByCode("Черновик");
-            if (draftStatus == null) {
-                throw new RuntimeException("Статус 'Черновик' не найден в базе данных");
-            }
+            tx = session.beginTransaction();
+            Status draft = statusDao.findByCode("Черновик");
+            if (draft == null) throw new RuntimeException("Статус 'Черновик' не найден");
 
             Payroll payroll = new Payroll();
             payroll.setForMonth(forMonth);
             payroll.setCreatedAt(LocalDateTime.now());
-            payroll.setStatus(draftStatus);
-
+            payroll.setStatus(draft);
             payrollDao.save(payroll);
 
-            String hql = "FROM Accrual WHERE forMonth = :forMonth AND (payroll IS NULL OR payroll.id = :payrollId)";
-            List<Accrual> accruals = session.createQuery(hql, Accrual.class)
-                    .setParameter("forMonth", forMonth)
-                    .setParameter("payrollId", payroll.getId())
-                    .getResultList();
-
-            for (Accrual accrual : accruals) {
-                accrual.setPayroll(payroll);
-                accrualDao.update(accrual);
+            for (Accrual a : session.createQuery("FROM Accrual WHERE forMonth = :m AND (payroll IS NULL OR payroll.id = :id)", Accrual.class)
+                    .setParameter("m", forMonth).setParameter("id", payroll.getId()).getResultList()) {
+                a.setPayroll(payroll);
+                accrualDao.update(a);
             }
-
-            transaction.commit();
+            tx.commit();
             return payroll;
         } catch (Exception e) {
-            if (transaction != null) {
-                transaction.rollback();
-            }
+            if (tx != null) tx.rollback();
             throw new RuntimeException("Ошибка при создании ведомости: " + e.getMessage(), e);
         } finally {
             session.close();
@@ -101,29 +86,17 @@ public class PayrollGenerationService {
     }
 
     public String generatePayrollFile(Payroll payroll) {
-        List<Accrual> accruals = getAccrualsForPayroll(payroll.getId());
-        String fileName = "payroll_" + payroll.getId() + ".pdf";
-        String filePath = "payrolls/" + fileName;
-
+        String path = "payrolls/payroll_" + payroll.getId() + ".pdf";
         try {
-            File dir = new File("payrolls");
-            dir.mkdirs();
-
-            String title = "ВЕДОМОСТЬ НА ВЫПЛАТУ СТИПЕНДИЙ";
-
-            File file = new File(filePath);
-            createPdf(file, title, accruals);
-
-            Status formedStatus = statusDao.findByCode("Сформирована");
-            if (formedStatus == null) {
-                throw new RuntimeException("Статус 'Сформирована' не найден в базе данных");
-            }
-
-            payroll.setFilePath(filePath);
-            payroll.setStatus(formedStatus);
+            new File("payrolls").mkdirs();
+            createPdf(new File(path), "ВЕДОМОСТЬ НА ВЫПЛАТУ СТИПЕНДИЙ", getAccrualsForPayroll(payroll.getId()));
+            
+            Status formed = statusDao.findByCode("Сформирована");
+            if (formed == null) throw new RuntimeException("Статус 'Сформирована' не найден");
+            payroll.setFilePath(path);
+            payroll.setStatus(formed);
             payrollDao.update(payroll);
-
-            return filePath;
+            return path;
         } catch (Exception e) {
             throw new RuntimeException("Ошибка при создании PDF: " + e.getMessage());
         }
@@ -131,31 +104,18 @@ public class PayrollGenerationService {
 
 
     private void createPdf(File file, String title, List<Accrual> accruals) throws Exception {
+        Document doc = new Document();
+        PdfWriter.getInstance(doc, new FileOutputStream(file));
+        BaseFont bf = BaseFont.createFont("src/main/resources/fonts/arial.ttf", BaseFont.IDENTITY_H, BaseFont.EMBEDDED);
+        Font font = new Font(bf, 10), titleFont = new Font(bf, 14, Font.BOLD), bold = new Font(bf, 10, Font.BOLD);
 
-        Document document = new Document();
-        PdfWriter.getInstance(document, new FileOutputStream(file));
-
-
-        BaseFont baseFont = BaseFont.createFont(
-            "src/main/resources/fonts/arial.ttf",
-            BaseFont.IDENTITY_H,
-            BaseFont.EMBEDDED);
-
-        Font font = new Font(baseFont, 10);
-        Font titleFont = new Font(baseFont, 14, Font.BOLD);
-
-        document.open();
-
-        document.add(new Paragraph(title, titleFont));
-
-        Font dateFont = new Font(baseFont, 10);
-        String dateText = "Дата формирования: " + LocalDate.now().format(DateTimeFormatter.ofPattern("dd.MM.yyyy"));
-        document.add(new Paragraph(dateText, dateFont));
-        document.add(Chunk.NEWLINE);
+        doc.open();
+        doc.add(new Paragraph(title, titleFont));
+        doc.add(new Paragraph("Дата формирования: " + LocalDate.now().format(DateTimeFormatter.ofPattern("dd.MM.yyyy")), font));
+        doc.add(Chunk.NEWLINE);
 
         PdfPTable table = new PdfPTable(5);
         table.setWidthPercentage(100);
-
         addCell(table, "№", font, true);
         addCell(table, "ФИО студента", font, true);
         addCell(table, "Группа", font, true);
@@ -163,66 +123,45 @@ public class PayrollGenerationService {
         addCell(table, "Сумма (руб.)", font, true);
 
         int num = 1;
-        BigDecimal totalAmount = BigDecimal.ZERO;
+        BigDecimal total = BigDecimal.ZERO;
+        Map<String, List<Accrual>> studentMap = new LinkedHashMap<>();
+        for (Accrual a : accruals)
+            studentMap.computeIfAbsent(a.getStudent().getFio() + "|" + a.getStudent().getGroupCode(), k -> new ArrayList<>()).add(a);
 
-        Map<String, List<Accrual>> studentAccruals = new LinkedHashMap<>();
-        for (Accrual accrual : accruals) {
-            String key = accrual.getStudent().getFio() + "|" + accrual.getStudent().getGroupCode();
-            studentAccruals.computeIfAbsent(key, k -> new ArrayList<>()).add(accrual);
-        }
-
-        for (Map.Entry<String, List<Accrual>> entry : studentAccruals.entrySet()) {
-            String[] parts = entry.getKey().split("\\|");
-            String fio = parts[0];
-            String groupCode = parts[1];
-            
-            List<Accrual> studentList = entry.getValue();
-
-            String types = studentList.stream()
-                .map(a -> a.getType().getName())
-                .collect(Collectors.joining(", "));
-
-            BigDecimal studentTotal = studentList.stream()
-                .map(Accrual::getAmount)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        for (Map.Entry<String, List<Accrual>> e : studentMap.entrySet()) {
+            String[] p = e.getKey().split("\\|");
+            List<Accrual> list = e.getValue();
+            BigDecimal sum = list.stream().map(Accrual::getAmount).reduce(BigDecimal.ZERO, BigDecimal::add);
             
             addCell(table, String.valueOf(num++), font, false);
-            addCell(table, fio, font, false);
-            addCell(table, groupCode, font, false);
-            addCell(table, types, font, false);
-            addCell(table, String.format("%.2f", studentTotal), font, false);
-
-            totalAmount = totalAmount.add(studentTotal);
+            addCell(table, p[0], font, false);
+            addCell(table, p[1], font, false);
+            addCell(table, list.stream().map(a -> a.getType().getName()).collect(Collectors.joining(", ")), font, false);
+            addCell(table, String.format("%.2f", sum), font, false);
+            total = total.add(sum);
         }
 
-        Font boldFont = new Font(baseFont, 10, Font.BOLD);
-        PdfPCell totalLabelCell = new PdfPCell(
-            new Phrase("Итого:", boldFont));
-        totalLabelCell.setColspan(4);
-        totalLabelCell.setPadding(5);
-        totalLabelCell.setHorizontalAlignment(Element.ALIGN_RIGHT);
-        table.addCell(totalLabelCell);
+        PdfPCell labelCell = new PdfPCell(new Phrase("Итого:", bold));
+        labelCell.setColspan(4);
+        labelCell.setPadding(5);
+        labelCell.setHorizontalAlignment(Element.ALIGN_RIGHT);
+        table.addCell(labelCell);
+        
+        PdfPCell amtCell = new PdfPCell(new Phrase(String.format("%.2f", total), bold));
+        amtCell.setPadding(5);
+        table.addCell(amtCell);
 
-        PdfPCell totalAmountCell = new PdfPCell(
-            new Phrase(String.format("%.2f", totalAmount), boldFont));
-        totalAmountCell.setPadding(5);
-        table.addCell(totalAmountCell);
-
-        document.add(table);
-        document.close();
+        doc.add(table);
+        doc.close();
     }
 
-    private void addCell(PdfPTable table, String text,
-                        Font font, boolean isHeader) {
-        PdfPCell cell = new PdfPCell(
-            new Phrase(text, font));
+    private void addCell(PdfPTable table, String text, Font font, boolean isHeader) {
+        PdfPCell cell = new PdfPCell(new Phrase(text, font));
         cell.setPadding(5);
-
         if (isHeader) {
             cell.setBackgroundColor(BaseColor.LIGHT_GRAY);
             cell.setHorizontalAlignment(Element.ALIGN_CENTER);
         }
-        
         table.addCell(cell);
     }
 
