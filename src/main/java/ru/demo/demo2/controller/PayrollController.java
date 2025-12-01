@@ -172,7 +172,42 @@ public class PayrollController {
         try {
             accrualsList.clear();
             List<Accrual> accruals = payrollService.getAccrualsForPayroll(payrollId);
-            accrualsList.addAll(accruals);
+
+            java.util.Map<Integer, List<Accrual>> studentMap = new java.util.LinkedHashMap<>();
+            for (Accrual accrual : accruals) {
+                studentMap.computeIfAbsent(accrual.getStudent().getId(), k -> new java.util.ArrayList<>()).add(accrual);
+            }
+
+            for (List<Accrual> group : studentMap.values()) {
+                if (group.isEmpty()) continue;
+
+                Accrual first = group.get(0);
+
+                if (group.size() == 1) {
+                    accrualsList.add(first);
+                } else {
+                    Accrual merged = new Accrual();
+                    merged.setId(first.getId());
+                    merged.setStudent(first.getStudent());
+                    merged.setForMonth(first.getForMonth());
+                    merged.setStatus(first.getStatus());
+
+                    String types = group.stream()
+                        .map(a -> a.getType().getName())
+                        .collect(java.util.stream.Collectors.joining(", "));
+
+                    java.math.BigDecimal total = group.stream()
+                        .map(Accrual::getAmount)
+                        .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
+
+                    ru.demo.demo2.model.ScholarshipType tempType = new ru.demo.demo2.model.ScholarshipType();
+                    tempType.setName(types);
+                    merged.setType(tempType);
+                    merged.setAmount(total);
+                    
+                    accrualsList.add(merged);
+                }
+            }
         } catch (Exception e) {
             resultLabel.setText("Ошибка при загрузке начислений: " + e.getMessage());
             resultLabel.setStyle("-fx-text-fill: red;");

@@ -164,14 +164,34 @@ public class PayrollGenerationService {
         int num = 1;
         java.math.BigDecimal totalAmount = java.math.BigDecimal.ZERO;
 
+        java.util.Map<String, java.util.List<Accrual>> studentAccruals = new java.util.LinkedHashMap<>();
         for (Accrual accrual : accruals) {
-            addCell(table, String.valueOf(num++), font, false);
-            addCell(table, accrual.getStudent().getFio(), font, false);
-            addCell(table, accrual.getStudent().getGroupCode(), font, false);
-            addCell(table, accrual.getType().getName(), font, false);
-            addCell(table, String.format("%.2f", accrual.getAmount()), font, false);
+            String key = accrual.getStudent().getFio() + "|" + accrual.getStudent().getGroupCode();
+            studentAccruals.computeIfAbsent(key, k -> new java.util.ArrayList<>()).add(accrual);
+        }
 
-            totalAmount = totalAmount.add(accrual.getAmount());
+        for (java.util.Map.Entry<String, java.util.List<Accrual>> entry : studentAccruals.entrySet()) {
+            String[] parts = entry.getKey().split("\\|");
+            String fio = parts[0];
+            String groupCode = parts[1];
+            
+            java.util.List<Accrual> studentList = entry.getValue();
+
+            String types = studentList.stream()
+                .map(a -> a.getType().getName())
+                .collect(java.util.stream.Collectors.joining(", "));
+
+            java.math.BigDecimal studentTotal = studentList.stream()
+                .map(Accrual::getAmount)
+                .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
+            
+            addCell(table, String.valueOf(num++), font, false);
+            addCell(table, fio, font, false);
+            addCell(table, groupCode, font, false);
+            addCell(table, types, font, false);
+            addCell(table, String.format("%.2f", studentTotal), font, false);
+
+            totalAmount = totalAmount.add(studentTotal);
         }
 
         Font boldFont = new Font(baseFont, 10, com.itextpdf.text.Font.BOLD);

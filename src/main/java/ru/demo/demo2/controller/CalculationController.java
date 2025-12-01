@@ -84,9 +84,7 @@ public class CalculationController {
 
         List<Accrual> created = calculationService.calculateScholarships(month);
 
-        accrualsList.clear();
-        List<Accrual> all = calculationService.getAccrualsForMonth(month);
-        accrualsList.addAll(all);
+        loadAccrualsGrouped(month);
 
         resultLabel.setText("Расчёт выполнен успешно! Создано начислений: " + created.size());
         resultLabel.setStyle("-fx-text-fill: green;");
@@ -99,11 +97,50 @@ public class CalculationController {
             return;
         }
 
+        loadAccrualsGrouped(month);
+        
+        resultLabel.setText("Обновлено. Всего: " + accrualsList.size());
+        resultLabel.setStyle("-fx-text-fill: blue;");
+    }
+    
+    private void loadAccrualsGrouped(LocalDate month) {
         accrualsList.clear();
         List<Accrual> all = calculationService.getAccrualsForMonth(month);
-        accrualsList.addAll(all);
         
-        resultLabel.setText("Обновлено. Всего: " + all.size());
-        resultLabel.setStyle("-fx-text-fill: blue;");
+        java.util.Map<Integer, List<Accrual>> studentMap = new java.util.LinkedHashMap<>();
+        for (Accrual accrual : all) {
+            studentMap.computeIfAbsent(accrual.getStudent().getId(), k -> new java.util.ArrayList<>()).add(accrual);
+        }
+
+        for (List<Accrual> group : studentMap.values()) {
+            if (group.isEmpty()) continue;
+
+            Accrual first = group.get(0);
+
+            if (group.size() == 1) {
+                accrualsList.add(first);
+            } else {
+                Accrual merged = new Accrual();
+                merged.setId(first.getId());
+                merged.setStudent(first.getStudent());
+                merged.setForMonth(first.getForMonth());
+                merged.setStatus(first.getStatus());
+
+                String types = group.stream()
+                    .map(a -> a.getType().getName())
+                    .collect(java.util.stream.Collectors.joining(", "));
+
+                java.math.BigDecimal total = group.stream()
+                    .map(Accrual::getAmount)
+                    .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
+
+                ru.demo.demo2.model.ScholarshipType tempType = new ru.demo.demo2.model.ScholarshipType();
+                tempType.setName(types);
+                merged.setType(tempType);
+                merged.setAmount(total);
+                
+                accrualsList.add(merged);
+            }
+        }
     }
 }
