@@ -1,5 +1,12 @@
 package ru.demo.demo2.service;
 
+import com.itextpdf.text.Chunk;
+import com.itextpdf.text.Document;
+import com.itextpdf.text.Font;
+import com.itextpdf.text.Paragraph;
+import com.itextpdf.text.pdf.BaseFont;
+import com.itextpdf.text.pdf.PdfPCell;
+import com.itextpdf.text.pdf.PdfWriter;
 import org.hibernate.Session;
 import org.hibernate.Transaction;
 import ru.demo.demo2.model.Accrual;
@@ -11,16 +18,18 @@ import ru.demo.demo2.repository.StatusDao;
 import ru.demo.demo2.util.HibernateSession;
 
 import java.io.File;
+import java.io.FileOutputStream;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 public class PayrollGenerationService {
-    
+
     private PayrollDao payrollDao;
     private AccrualDao accrualDao;
     private StatusDao statusDao;
-    
+
     public PayrollGenerationService() {
         this.payrollDao = new PayrollDao();
         this.accrualDao = new AccrualDao();
@@ -32,10 +41,10 @@ public class PayrollGenerationService {
         if (existingPayroll != null) {
             throw new RuntimeException("Ведомость за " + forMonth + " уже существует (ID: " + existingPayroll.getId() + ")");
         }
-        
+
         Session session = HibernateSession.getSessionFactory().openSession();
         Transaction transaction = null;
-        
+
         try {
             transaction = session.beginTransaction();
 
@@ -48,7 +57,7 @@ public class PayrollGenerationService {
             payroll.setForMonth(forMonth);
             payroll.setCreatedAt(LocalDateTime.now());
             payroll.setStatus(draftStatus);
-            
+
             payrollDao.save(payroll);
 
             String hql = "FROM Accrual WHERE forMonth = :forMonth AND (payroll IS NULL OR payroll.id = :payrollId)";
@@ -56,12 +65,12 @@ public class PayrollGenerationService {
                     .setParameter("forMonth", forMonth)
                     .setParameter("payrollId", payroll.getId())
                     .getResultList();
-            
+
             for (Accrual accrual : accruals) {
                 accrual.setPayroll(payroll);
                 accrualDao.update(accrual);
             }
-            
+
             transaction.commit();
             return payroll;
         } catch (Exception e) {
@@ -73,7 +82,7 @@ public class PayrollGenerationService {
             session.close();
         }
     }
-    
+
     public List<Payroll> getAllPayrolls() {
         return payrollDao.findAll();
     }
@@ -94,7 +103,7 @@ public class PayrollGenerationService {
         List<Accrual> accruals = getAccrualsForPayroll(payroll.getId());
         String fileName = "payroll_" + payroll.getId() + ".pdf";
         String filePath = "payrolls/" + fileName;
-        
+
         try {
             File dir = new File("payrolls");
             dir.mkdirs();
@@ -112,7 +121,7 @@ public class PayrollGenerationService {
             payroll.setFilePath(filePath);
             payroll.setStatus(formedStatus);
             payrollDao.update(payroll);
-            
+
             return filePath;
         } catch (Exception e) {
             throw new RuntimeException("Ошибка при создании PDF: " + e.getMessage());
@@ -122,22 +131,26 @@ public class PayrollGenerationService {
 
     private void createPdf(File file, String title, List<Accrual> accruals) throws Exception {
 
-        com.itextpdf.text.Document document = new com.itextpdf.text.Document();
-        com.itextpdf.text.pdf.PdfWriter.getInstance(document, new java.io.FileOutputStream(file));
-        
+        Document document = new Document();
+        PdfWriter.getInstance(document, new FileOutputStream(file));
 
-        com.itextpdf.text.pdf.BaseFont baseFont = com.itextpdf.text.pdf.BaseFont.createFont(
-            "src/main/resources/fonts/arial.ttf", 
-            com.itextpdf.text.pdf.BaseFont.IDENTITY_H, 
+
+        BaseFont baseFont = com.itextpdf.text.pdf.BaseFont.createFont(
+            "src/main/resources/fonts/arial.ttf",
+            com.itextpdf.text.pdf.BaseFont.IDENTITY_H,
             com.itextpdf.text.pdf.BaseFont.EMBEDDED);
-        
-        com.itextpdf.text.Font font = new com.itextpdf.text.Font(baseFont, 10);
-        com.itextpdf.text.Font titleFont = new com.itextpdf.text.Font(baseFont, 14, com.itextpdf.text.Font.BOLD);
-        
+
+        Font font = new Font(baseFont, 10);
+        Font titleFont = new Font(baseFont, 14, com.itextpdf.text.Font.BOLD);
+
         document.open();
 
-        document.add(new com.itextpdf.text.Paragraph(title, titleFont));
-        document.add(com.itextpdf.text.Chunk.NEWLINE);
+        document.add(new Paragraph(title, titleFont));
+
+        com.itextpdf.text.Font dateFont = new com.itextpdf.text.Font(baseFont, 10);
+        String dateText = "Дата формирования: " + LocalDate.now().format(DateTimeFormatter.ofPattern("dd.MM.yyyy"));
+        document.add(new Paragraph(dateText, dateFont));
+        document.add(Chunk.NEWLINE);
 
         com.itextpdf.text.pdf.PdfPTable table = new com.itextpdf.text.pdf.PdfPTable(5);
         table.setWidthPercentage(100);
@@ -149,24 +162,41 @@ public class PayrollGenerationService {
         addCell(table, "Сумма (руб.)", font, true);
 
         int num = 1;
+        java.math.BigDecimal totalAmount = java.math.BigDecimal.ZERO;
+
         for (Accrual accrual : accruals) {
             addCell(table, String.valueOf(num++), font, false);
             addCell(table, accrual.getStudent().getFio(), font, false);
             addCell(table, accrual.getStudent().getGroupCode(), font, false);
             addCell(table, accrual.getType().getName(), font, false);
             addCell(table, String.format("%.2f", accrual.getAmount()), font, false);
+
+            totalAmount = totalAmount.add(accrual.getAmount());
         }
-        
+
+        Font boldFont = new Font(baseFont, 10, com.itextpdf.text.Font.BOLD);
+        PdfPCell totalLabelCell = new com.itextpdf.text.pdf.PdfPCell(
+            new com.itextpdf.text.Phrase("Итого:", boldFont));
+        totalLabelCell.setColspan(4);
+        totalLabelCell.setPadding(5);
+        totalLabelCell.setHorizontalAlignment(com.itextpdf.text.Element.ALIGN_RIGHT);
+        table.addCell(totalLabelCell);
+
+        com.itextpdf.text.pdf.PdfPCell totalAmountCell = new com.itextpdf.text.pdf.PdfPCell(
+            new com.itextpdf.text.Phrase(String.format("%.2f", totalAmount), boldFont));
+        totalAmountCell.setPadding(5);
+        table.addCell(totalAmountCell);
+
         document.add(table);
         document.close();
     }
 
-    private void addCell(com.itextpdf.text.pdf.PdfPTable table, String text, 
+    private void addCell(com.itextpdf.text.pdf.PdfPTable table, String text,
                         com.itextpdf.text.Font font, boolean isHeader) {
         com.itextpdf.text.pdf.PdfPCell cell = new com.itextpdf.text.pdf.PdfPCell(
             new com.itextpdf.text.Phrase(text, font));
         cell.setPadding(5);
-        
+
         if (isHeader) {
             cell.setBackgroundColor(com.itextpdf.text.BaseColor.LIGHT_GRAY);
             cell.setHorizontalAlignment(com.itextpdf.text.Element.ALIGN_CENTER);

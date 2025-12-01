@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox spacing="10" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="ru.demo.demo2.controller.StudentsController">
+    <padding>
+        <Insets bottom="20" left="20" right="20" top="20"/>
+    </padding>
+    
+    <Label style="-fx-font-size: 20px; -fx-font-weight: bold;" text="Управление студентами"/>
+    
+    <HBox spacing="10">
+        <Button onAction="#onAddClick" text="Добавить студента"/>
+        <Button onAction="#onEditClick" text="Редактировать"/>
+        <Button onAction="#onDeleteClick" style="-fx-background-color: #f44336; -fx-text-fill: white;" text="Удалить"/>
+        <Region HBox.hgrow="ALWAYS"/>
+        <Button onAction="#onRefreshClick" text="Обновить"/>
+    </HBox>
+    
+    <TableView fx:id="studentsTable" VBox.vgrow="ALWAYS">
+        <columns>
+            <TableColumn fx:id="idColumn" prefWidth="50" text="ID"/>
+            <TableColumn fx:id="fioColumn" prefWidth="250" text="ФИО"/>
+            <TableColumn fx:id="groupColumn" prefWidth="100" text="Группа"/>
+            <TableColumn fx:id="avgGradeColumn" prefWidth="100" text="Средний балл"/>
+            <TableColumn fx:id="socialStatusColumn" prefWidth="150" text="Соц. статус"/>
+        </columns>
+    </TableView>
+</VBox>

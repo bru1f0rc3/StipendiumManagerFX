@@ -27,5 +27,13 @@
         <Button onAction="#onCalculationModuleClick" prefWidth="200" style="-fx-background-color: transparent; -fx-text-fill: #333; -fx-alignment: CENTER_LEFT; -fx-padding: 15; -fx-cursor: hand; -fx-border-width: 0 0 1 0; -fx-border-color: #d0d0d0;" text="Расчёт стипендий"/>
         
         <Button onAction="#onPayrollModuleClick" prefWidth="200" style="-fx-background-color: transparent; -fx-text-fill: #333; -fx-alignment: CENTER_LEFT; -fx-padding: 15; -fx-cursor: hand; -fx-border-width: 0 0 1 0; -fx-border-color: #d0d0d0;" text="Ведомости"/>
+        
+        <Button onAction="#onStudentsClick" prefWidth="200" style="-fx-background-color: transparent; -fx-text-fill: #333; -fx-alignment: CENTER_LEFT; -fx-padding: 15; -fx-cursor: hand; -fx-border-width: 0 0 1 0; -fx-border-color: #d0d0d0;" text="Студенты"/>
+        
+        <Button onAction="#onGroupsClick" prefWidth="200" style="-fx-background-color: transparent; -fx-text-fill: #333; -fx-alignment: CENTER_LEFT; -fx-padding: 15; -fx-cursor: hand; -fx-border-width: 0 0 1 0; -fx-border-color: #d0d0d0;" text="Группы"/>
+        
+        <Button onAction="#onScholarshipTypesClick" prefWidth="200" style="-fx-background-color: transparent; -fx-text-fill: #333; -fx-alignment: CENTER_LEFT; -fx-padding: 15; -fx-cursor: hand; -fx-border-width: 0 0 1 0; -fx-border-color: #d0d0d0;" text="Типы стипендий"/>
+        
+        <Button onAction="#onGroundsClick" prefWidth="200" style="-fx-background-color: transparent; -fx-text-fill: #333; -fx-alignment: CENTER_LEFT; -fx-padding: 15; -fx-cursor: hand; -fx-border-width: 0 0 1 0; -fx-border-color: #d0d0d0;" text="Основания"/>
     </VBox>
 </StackPane>

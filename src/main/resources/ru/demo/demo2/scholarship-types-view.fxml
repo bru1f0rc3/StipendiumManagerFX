@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox spacing="10" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="ru.demo.demo2.controller.ScholarshipTypesController">
+    <padding>
+        <Insets bottom="20" left="20" right="20" top="20"/>
+    </padding>
+    
+    <Label style="-fx-font-size: 20px; -fx-font-weight: bold;" text="Управление типами стипендий"/>
+    
+    <HBox spacing="10">
+        <Button onAction="#onAddClick" text="Добавить тип"/>
+        <Button onAction="#onEditClick" text="Редактировать"/>
+        <Button onAction="#onDeleteClick" style="-fx-background-color: #f44336; -fx-text-fill: white;" text="Удалить"/>
+        <Region HBox.hgrow="ALWAYS"/>
+        <Button onAction="#onRefreshClick" text="Обновить"/>
+    </HBox>
+    
+    <TableView fx:id="typesTable" VBox.vgrow="ALWAYS">
+        <columns>
+            <TableColumn fx:id="idColumn" prefWidth="50" text="ID"/>
+            <TableColumn fx:id="nameColumn" prefWidth="200" text="Название"/>
+            <TableColumn fx:id="baseAmountColumn" prefWidth="150" text="Базовая сумма"/>
+            <TableColumn fx:id="requiresDocsColumn" prefWidth="150" text="Требуются документы"/>
+        </columns>
+    </TableView>
+</VBox>

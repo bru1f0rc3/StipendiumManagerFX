@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox spacing="10" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="ru.demo.demo2.controller.GroupsController">
+    <padding>
+        <Insets bottom="20" left="20" right="20" top="20"/>
+    </padding>
+    
+    <Label style="-fx-font-size: 20px; -fx-font-weight: bold;" text="Управление группами"/>
+    
+    <HBox spacing="10">
+        <Button onAction="#onAddClick" text="Добавить группу"/>
+        <Button onAction="#onEditClick" text="Редактировать"/>
+        <Button onAction="#onDeleteClick" style="-fx-background-color: #f44336; -fx-text-fill: white;" text="Удалить"/>
+        <Region HBox.hgrow="ALWAYS"/>
+        <Button onAction="#onRefreshClick" text="Обновить"/>
+    </HBox>
+    
+    <TableView fx:id="groupsTable" VBox.vgrow="ALWAYS">
+        <columns>
+            <TableColumn fx:id="idColumn" prefWidth="50" text="ID"/>
+            <TableColumn fx:id="groupCodeColumn" prefWidth="150" text="Код группы"/>
+            <TableColumn fx:id="courseColumn" prefWidth="100" text="Курс"/>
+            <TableColumn fx:id="facultyColumn" prefWidth="300" text="Факультет"/>
+        </columns>
+    </TableView>
+</VBox>

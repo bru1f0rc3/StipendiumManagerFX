@@ -75,6 +75,30 @@ public class MainMenuController {
         }
     }
     
+    @FXML
+    private void onStudentsClick() {
+        closeMenu();
+        loadView("/ru/demo/demo2/students-view.fxml");
+    }
+    
+    @FXML
+    private void onGroupsClick() {
+        closeMenu();
+        loadView("/ru/demo/demo2/groups-view.fxml");
+    }
+    
+    @FXML
+    private void onScholarshipTypesClick() {
+        closeMenu();
+        loadView("/ru/demo/demo2/scholarship-types-view.fxml");
+    }
+    
+    @FXML
+    private void onGroundsClick() {
+        closeMenu();
+        loadView("/ru/demo/demo2/grounds-view.fxml");
+    }
+    
     private void loadView(String fxml) {
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource(fxml));
