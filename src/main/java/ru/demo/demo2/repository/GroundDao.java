@@ -16,19 +16,16 @@ public class GroundDao extends BaseDao<Ground> {
     }
     
     public boolean hasValidGround(Student student, ScholarshipType type, LocalDate forMonth) {
-        Session session = HibernateSession.getSessionFactory().openSession();
-        try {
+        try (Session session = HibernateSession.getSessionFactory().openSession()) {
             String hql = "FROM Ground WHERE student.id = :studentId AND type.id = :typeId " +
-                         "AND (validUntil IS NULL OR validUntil >= :forMonth)";
+                    "AND (validUntil IS NULL OR validUntil >= :forMonth)";
             List<Ground> grounds = session.createQuery(hql, Ground.class)
                     .setParameter("studentId", student.getId())
                     .setParameter("typeId", type.getId())
                     .setParameter("forMonth", forMonth)
                     .getResultList();
-            
+
             return !grounds.isEmpty();
-        } finally {
-            session.close();
         }
     }
 }

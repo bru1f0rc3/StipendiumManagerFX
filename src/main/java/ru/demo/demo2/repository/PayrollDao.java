@@ -14,16 +14,13 @@ public class PayrollDao extends BaseDao<Payroll> {
     }
 
     public Payroll findByMonth(LocalDate forMonth) {
-        Session session = HibernateSession.getSessionFactory().openSession();
-        try {
+        try (Session session = HibernateSession.getSessionFactory().openSession()) {
             String hql = "FROM Payroll WHERE forMonth = :forMonth";
             List<Payroll> payrolls = session.createQuery(hql, Payroll.class)
                     .setParameter("forMonth", forMonth)
                     .getResultList();
-            
+
             return payrolls.isEmpty() ? null : payrolls.get(0);
-        } finally {
-            session.close();
         }
     }
 }

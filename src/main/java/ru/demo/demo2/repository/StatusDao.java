@@ -14,16 +14,13 @@ public class StatusDao extends BaseDao<Status> {
     }
     
     public Status findByCode(String statusCode) {
-        Session session = HibernateSession.getSessionFactory().openSession();
-        try {
+        try (Session session = HibernateSession.getSessionFactory().openSession()) {
             String hql = "FROM Status WHERE statusCode = :statusCode";
             Query<Status> query = session.createQuery(hql, Status.class);
             query.setParameter("statusCode", statusCode);
-            
+
             List<Status> results = query.getResultList();
             return results.isEmpty() ? null : results.get(0);
-        } finally {
-            session.close();
         }
     }
 }
