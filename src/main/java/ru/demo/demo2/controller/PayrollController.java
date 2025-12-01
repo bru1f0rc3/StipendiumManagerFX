@@ -6,11 +6,14 @@ import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import ru.demo.demo2.model.Accrual;
 import ru.demo.demo2.model.Payroll;
+import ru.demo.demo2.model.ScholarshipType;
 import ru.demo.demo2.service.PayrollGenerationService;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
 
 public class PayrollController {
     
@@ -173,9 +176,9 @@ public class PayrollController {
             accrualsList.clear();
             List<Accrual> accruals = payrollService.getAccrualsForPayroll(payrollId);
 
-            java.util.Map<Integer, List<Accrual>> studentMap = new java.util.LinkedHashMap<>();
+            Map<Integer, List<Accrual>> studentMap = new LinkedHashMap<>();
             for (Accrual accrual : accruals) {
-                studentMap.computeIfAbsent(accrual.getStudent().getId(), k -> new java.util.ArrayList<>()).add(accrual);
+                studentMap.computeIfAbsent(accrual.getStudent().getId(), k -> new ArrayList<>()).add(accrual);
             }
 
             for (List<Accrual> group : studentMap.values()) {
@@ -194,13 +197,13 @@ public class PayrollController {
 
                     String types = group.stream()
                         .map(a -> a.getType().getName())
-                        .collect(java.util.stream.Collectors.joining(", "));
+                        .collect(Collectors.joining(", "));
 
-                    java.math.BigDecimal total = group.stream()
+                    BigDecimal total = group.stream()
                         .map(Accrual::getAmount)
-                        .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
+                        .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-                    ru.demo.demo2.model.ScholarshipType tempType = new ru.demo.demo2.model.ScholarshipType();
+                    ScholarshipType tempType = new ScholarshipType();
                     tempType.setName(types);
                     merged.setType(tempType);
                     merged.setAmount(total);

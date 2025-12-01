@@ -1,11 +1,9 @@
 package ru.demo.demo2.service;
 
-import com.itextpdf.text.Chunk;
-import com.itextpdf.text.Document;
-import com.itextpdf.text.Font;
-import com.itextpdf.text.Paragraph;
+import com.itextpdf.text.*;
 import com.itextpdf.text.pdf.BaseFont;
 import com.itextpdf.text.pdf.PdfPCell;
+import com.itextpdf.text.pdf.PdfPTable;
 import com.itextpdf.text.pdf.PdfWriter;
 import org.hibernate.Session;
 import org.hibernate.Transaction;
@@ -19,10 +17,13 @@ import ru.demo.demo2.util.HibernateSession;
 
 import java.io.File;
 import java.io.FileOutputStream;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.*;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class PayrollGenerationService {
 
@@ -135,24 +136,24 @@ public class PayrollGenerationService {
         PdfWriter.getInstance(document, new FileOutputStream(file));
 
 
-        BaseFont baseFont = com.itextpdf.text.pdf.BaseFont.createFont(
+        BaseFont baseFont = BaseFont.createFont(
             "src/main/resources/fonts/arial.ttf",
-            com.itextpdf.text.pdf.BaseFont.IDENTITY_H,
-            com.itextpdf.text.pdf.BaseFont.EMBEDDED);
+            BaseFont.IDENTITY_H,
+            BaseFont.EMBEDDED);
 
         Font font = new Font(baseFont, 10);
-        Font titleFont = new Font(baseFont, 14, com.itextpdf.text.Font.BOLD);
+        Font titleFont = new Font(baseFont, 14, Font.BOLD);
 
         document.open();
 
         document.add(new Paragraph(title, titleFont));
 
-        com.itextpdf.text.Font dateFont = new com.itextpdf.text.Font(baseFont, 10);
+        Font dateFont = new Font(baseFont, 10);
         String dateText = "Дата формирования: " + LocalDate.now().format(DateTimeFormatter.ofPattern("dd.MM.yyyy"));
         document.add(new Paragraph(dateText, dateFont));
         document.add(Chunk.NEWLINE);
 
-        com.itextpdf.text.pdf.PdfPTable table = new com.itextpdf.text.pdf.PdfPTable(5);
+        PdfPTable table = new PdfPTable(5);
         table.setWidthPercentage(100);
 
         addCell(table, "№", font, true);
@@ -162,28 +163,28 @@ public class PayrollGenerationService {
         addCell(table, "Сумма (руб.)", font, true);
 
         int num = 1;
-        java.math.BigDecimal totalAmount = java.math.BigDecimal.ZERO;
+        BigDecimal totalAmount = BigDecimal.ZERO;
 
-        java.util.Map<String, java.util.List<Accrual>> studentAccruals = new java.util.LinkedHashMap<>();
+        Map<String, List<Accrual>> studentAccruals = new LinkedHashMap<>();
         for (Accrual accrual : accruals) {
             String key = accrual.getStudent().getFio() + "|" + accrual.getStudent().getGroupCode();
-            studentAccruals.computeIfAbsent(key, k -> new java.util.ArrayList<>()).add(accrual);
+            studentAccruals.computeIfAbsent(key, k -> new ArrayList<>()).add(accrual);
         }
 
-        for (java.util.Map.Entry<String, java.util.List<Accrual>> entry : studentAccruals.entrySet()) {
+        for (Map.Entry<String, List<Accrual>> entry : studentAccruals.entrySet()) {
             String[] parts = entry.getKey().split("\\|");
             String fio = parts[0];
             String groupCode = parts[1];
             
-            java.util.List<Accrual> studentList = entry.getValue();
+            List<Accrual> studentList = entry.getValue();
 
             String types = studentList.stream()
                 .map(a -> a.getType().getName())
-                .collect(java.util.stream.Collectors.joining(", "));
+                .collect(Collectors.joining(", "));
 
-            java.math.BigDecimal studentTotal = studentList.stream()
+            BigDecimal studentTotal = studentList.stream()
                 .map(Accrual::getAmount)
-                .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
             
             addCell(table, String.valueOf(num++), font, false);
             addCell(table, fio, font, false);
@@ -194,16 +195,16 @@ public class PayrollGenerationService {
             totalAmount = totalAmount.add(studentTotal);
         }
 
-        Font boldFont = new Font(baseFont, 10, com.itextpdf.text.Font.BOLD);
-        PdfPCell totalLabelCell = new com.itextpdf.text.pdf.PdfPCell(
-            new com.itextpdf.text.Phrase("Итого:", boldFont));
+        Font boldFont = new Font(baseFont, 10, Font.BOLD);
+        PdfPCell totalLabelCell = new PdfPCell(
+            new Phrase("Итого:", boldFont));
         totalLabelCell.setColspan(4);
         totalLabelCell.setPadding(5);
-        totalLabelCell.setHorizontalAlignment(com.itextpdf.text.Element.ALIGN_RIGHT);
+        totalLabelCell.setHorizontalAlignment(Element.ALIGN_RIGHT);
         table.addCell(totalLabelCell);
 
-        com.itextpdf.text.pdf.PdfPCell totalAmountCell = new com.itextpdf.text.pdf.PdfPCell(
-            new com.itextpdf.text.Phrase(String.format("%.2f", totalAmount), boldFont));
+        PdfPCell totalAmountCell = new PdfPCell(
+            new Phrase(String.format("%.2f", totalAmount), boldFont));
         totalAmountCell.setPadding(5);
         table.addCell(totalAmountCell);
 
@@ -211,15 +212,15 @@ public class PayrollGenerationService {
         document.close();
     }
 
-    private void addCell(com.itextpdf.text.pdf.PdfPTable table, String text,
-                        com.itextpdf.text.Font font, boolean isHeader) {
-        com.itextpdf.text.pdf.PdfPCell cell = new com.itextpdf.text.pdf.PdfPCell(
-            new com.itextpdf.text.Phrase(text, font));
+    private void addCell(PdfPTable table, String text,
+                        Font font, boolean isHeader) {
+        PdfPCell cell = new PdfPCell(
+            new Phrase(text, font));
         cell.setPadding(5);
 
         if (isHeader) {
-            cell.setBackgroundColor(com.itextpdf.text.BaseColor.LIGHT_GRAY);
-            cell.setHorizontalAlignment(com.itextpdf.text.Element.ALIGN_CENTER);
+            cell.setBackgroundColor(BaseColor.LIGHT_GRAY);
+            cell.setHorizontalAlignment(Element.ALIGN_CENTER);
         }
         
         table.addCell(cell);
